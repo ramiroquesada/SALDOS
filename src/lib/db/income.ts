@@ -30,6 +30,7 @@ export async function createIncome(
 }
 
 export async function deleteIncome(id: string, familyId: string) {
+  // El familyId en la condición evita eliminar registros de otras familias
   return prisma.income.delete({
     where: { id, familyId },
   })
