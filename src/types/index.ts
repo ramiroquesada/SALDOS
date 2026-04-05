@@ -31,6 +31,7 @@ export type FixedExpense = {
 export type CreateFixedExpenseInput = {
   amount: number
   category: string
+  // month y familyId vienen del contexto de auth, no del formulario
 }
 
 export type Income = {
@@ -48,4 +49,5 @@ export type Income = {
 export type CreateIncomeInput = {
   amount: number
   description?: string
+  // earnedBy viene de requireAuth().userName, no del formulario
 }
