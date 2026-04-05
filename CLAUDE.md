@@ -10,18 +10,6 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ### ✅ Fase 1 — Completada (2026-04-04)
 
-Todo el código está implementado y commiteado. **Falta conectar la base de datos real:**
-
-1. Completar `.env.local` con credenciales reales de Supabase:
-   - `NEXT_PUBLIC_SUPABASE_URL`
-   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-   - `SUPABASE_SERVICE_ROLE_KEY`
-   - `DATABASE_URL` (connection pooler, puerto 6543, `?pgbouncer=true`)
-   - `DIRECT_URL` (direct connection, puerto 5432)
-2. Correr `npx prisma migrate dev --name init` para crear las tablas
-3. Configurar Google OAuth en Supabase Dashboard → callback URL: `{APP_URL}/auth/callback`
-
-**Lo que está funcionando en código:**
 - Google OAuth flow completo con sync a Prisma (crear User + Family en primer login)
 - Middleware protege `/dashboard/*` → redirige a `/auth/login` si no autenticado
 - CRUD de gastos variables: crear, listar por mes, eliminar
@@ -29,12 +17,11 @@ Todo el código está implementado y commiteado. **Falta conectar la base de dat
 - Layout mobile con Header + BottomNav (6 tabs)
 - Tests de utilidades pasando (`npm test`)
 
-### ⏳ Fase 2 — Pendiente
+### ✅ Fase 2 — Completada (2026-04-05)
 
-Gastos Fijos + Ingresos + Dashboard con balance real.
-- `/dashboard/fixed` — gastos fijos con toggle paid/unpaid
+- `/dashboard/fixed` — gastos fijos con toggle pagado/no pagado por ítem
 - `/dashboard/income` — ingresos por miembro
-- `/dashboard` — balance del mes: ingresos - gastos variables - gastos fijos + resumen por categoría
+- `/dashboard` — balance real del mes: ingresos − variables − fijos + breakdown por categoría
 
 ### ⏳ Fase 3 — Pendiente
 
@@ -71,6 +58,8 @@ npx prisma studio                    # Browse database visually
 - Version: **7.6.0**
 - Generated client lives in `src/generated/prisma/` — always import from `@/generated/prisma`, not `@prisma/client`
 - `prisma.config.ts` at project root handles `DATABASE_URL` and `DIRECT_URL` — no need to add them to `schema.prisma`
+- Runtime uses `@prisma/adapter-pg` (PrismaPg) — required by Prisma 7's client engine
+- For migrations/db push: uses `DIRECT_URL` (port 5432), not the pgbouncer pooler
 
 ## Architecture
 
@@ -80,20 +69,22 @@ Browser (React) → Server Components / Server Actions → Prisma → PostgreSQL
                                               Supabase Auth (Google OAuth)
 ```
 
-- **Server Components** for dashboard and read-heavy pages — read Prisma directly, no fetch/useEffect
+- **Server Components** for all read pages — read Prisma directly, no fetch/useEffect
 - **Server Actions** (`src/actions/`) for all mutations — validate auth, call `src/lib/db/*`, revalidate path
-- **No API Route Handlers** for now — logic lives in `actions/` and `lib/db/`
+- **No API Route Handlers** — logic lives in `actions/` and `lib/db/`
 - **Next.js Middleware** protects all `/dashboard/*` routes — redirect unauthenticated users to `/auth/login`
 - Data is always scoped to a `familyId` — never query without it
 - Monthly data is segmented by `month: "YYYY-MM"` string (e.g. `"2026-04"`) — all queries filter by this field
 
-## Codebase Structure (implemented)
+## Codebase Structure
 
 ```
 src/
 ├── __tests__/utils.test.ts          # Vitest tests for utility functions
 ├── actions/
-│   └── expenses.ts                  # Server Actions: createExpense, deleteExpense
+│   ├── expenses.ts                  # createExpense, deleteExpense
+│   ├── fixed-expenses.ts            # createFixedExpense, toggleFixedExpensePaid, deleteFixedExpense
+│   └── income.ts                    # createIncome, deleteIncome
 ├── app/
 │   ├── page.tsx                     # Root redirect (auth → /dashboard, no auth → /auth/login)
 │   ├── layout.tsx                   # Root layout (Geist font, lang="es")
@@ -103,34 +94,45 @@ src/
 │   │   └── callback/route.ts        # OAuth callback → sync Prisma User+Family
 │   └── dashboard/
 │       ├── layout.tsx               # Dashboard shell: wraps children + BottomNav
-│       ├── page.tsx                 # Dashboard home (placeholder, Fase 2)
-│       └── expenses/page.tsx        # Expenses list + form (Fase 1 ✅)
+│       ├── page.tsx                 # Balance overview + category breakdown
+│       ├── expenses/page.tsx        # Variable expenses list + form
+│       ├── fixed/page.tsx           # Fixed expenses list + paid/unpaid toggle
+│       └── income/page.tsx          # Income list + form
 ├── components/
-│   ├── auth/GoogleLoginButton.tsx   # Client component: Supabase OAuth trigger
+│   ├── auth/GoogleLoginButton.tsx
 │   ├── expenses/
-│   │   ├── ExpenseForm.tsx          # Client: form to add a new expense
-│   │   └── ExpenseList.tsx          # Client: list with delete button per item
+│   │   ├── ExpenseForm.tsx
+│   │   └── ExpenseList.tsx
+│   ├── fixed/
+│   │   ├── FixedExpenseForm.tsx
+│   │   └── FixedExpenseList.tsx     # Per-row useTransition for toggle + delete
+│   ├── income/
+│   │   ├── IncomeForm.tsx
+│   │   └── IncomeList.tsx           # Per-row useTransition for delete
 │   ├── layout/
-│   │   ├── BottomNav.tsx            # Client: 6-tab fixed bottom navigation
-│   │   ├── Header.tsx               # Server: sticky header with title + MonthSelector
-│   │   └── MonthSelector.tsx        # Client: prev/next month buttons (modifies URL)
+│   │   ├── BottomNav.tsx
+│   │   ├── Header.tsx
+│   │   └── MonthSelector.tsx
 │   └── ui/
-│       ├── Button.tsx               # Primitive: primary/ghost/danger, sm/md/lg, loading
-│       ├── Card.tsx                 # Primitive: white rounded card
-│       └── Input.tsx                # Primitive: labeled input with error state
+│       ├── Button.tsx               # primary/ghost/danger, sm/md/lg, loading state
+│       ├── Card.tsx
+│       └── Input.tsx                # labeled input with error state
 ├── generated/prisma/                # Auto-generated Prisma client (DO NOT EDIT)
 ├── lib/
 │   ├── auth.ts                      # requireAuth() → { userId, familyId, userName }
 │   ├── constants.ts                 # VARIABLE_CATEGORIES, FIXED_CATEGORIES, CATEGORY_COLORS
 │   ├── db/
-│   │   └── expenses.ts              # Pure Prisma queries: get/create/delete expenses
-│   ├── prisma.ts                    # PrismaClient singleton
+│   │   ├── expenses.ts              # Pure Prisma queries for variable expenses
+│   │   ├── fixed-expenses.ts        # Pure Prisma queries for fixed expenses
+│   │   ├── income.ts                # Pure Prisma queries for income
+│   │   └── dashboard.ts             # getDashboardData() — parallel queries, balance calc
+│   ├── prisma.ts                    # PrismaClient singleton (with PrismaPg adapter)
 │   ├── supabase/
-│   │   ├── client.ts                # Browser Supabase client
-│   │   └── server.ts                # Server Supabase client (SSR cookies)
+│   │   ├── client.ts
+│   │   └── server.ts
 │   └── utils.ts                     # formatMoney, getMonthKey, formatMonthLabel, cn, prevMonth, nextMonth
-├── types/index.ts                   # Expense, CreateExpenseInput
-middleware.ts                        # Protects /dashboard/*, redirects /auth/login if logged in
+├── types/index.ts                   # Expense, FixedExpense, Income + input types
+middleware.ts                        # Protects /dashboard/*, redirects /auth/login if unauthenticated
 ```
 
 ## Data Model Key Points
@@ -138,14 +140,15 @@ middleware.ts                        # Protects /dashboard/*, redirects /auth/lo
 - `User` belongs to one `Family`; all financial records belong to `Family`, not `User`
 - `spentBy` / `earnedBy` are resolved to the user's display name at record creation
 - `inviteCode` on `Family` is a UUID used to generate invite links for the partner
-- `month` field indexes (`@@index([familyId, month])`) are present on Expense, FixedExpense, Income, and Budget — always include both in queries
+- `month` field indexes (`@@index([familyId, month])`) are present on all financial models — always include both in queries
+- Dashboard balance = `totalIncome − totalVariableExpenses − totalFixedExpenses` (budget view: all fixed expenses count regardless of paid status)
 
 ## Auth Flow
 
 1. Google OAuth via Supabase Auth
-2. On first login: create `User` + `Family` records
+2. On first login: create `User` + `Family` records, store `familyId` in `user_metadata`
 3. Partner joins via `/invite/[code]` → links their `User` to existing `Family`
-4. Supabase server client (`src/lib/supabase/server.ts`) for route handlers/middleware; browser client (`src/lib/supabase/client.ts`) for client components
+4. `familyId` always sourced from `requireAuth()` server-side — never from client input
 
 ## Required Environment Variables
 
@@ -153,7 +156,8 @@ middleware.ts                        # Protects /dashboard/*, redirects /auth/lo
 NEXT_PUBLIC_SUPABASE_URL
 NEXT_PUBLIC_SUPABASE_ANON_KEY
 SUPABASE_SERVICE_ROLE_KEY
-DATABASE_URL                    # Supabase PostgreSQL connection string
+DATABASE_URL          # Supabase pooler (port 6543, ?pgbouncer=true) — runtime queries
+DIRECT_URL            # Supabase direct (port 5432) — migrations only
 NEXT_PUBLIC_APP_URL
 ```
 
@@ -163,19 +167,8 @@ NEXT_PUBLIC_APP_URL
 - **Mobile-first**: bottom navigation bar (6 tabs), large touch targets, numeric inputs for money
 - **Color palette**: dark navy header (`#1a1a2e` / `#16213e`), light content area (`#f5f6fa`)
 - **Money display**: monospace font; use `formatMoney()` from `src/lib/utils.ts`
-- **Progress bars**: green → yellow (80%) → red (100%) using semaphore coloring
+- **Progress bars**: colored by category (CATEGORY_COLORS), width = % of total variable expenses
 - Emojis used as iconography throughout the UI
-
-## Feature Modules
-
-| Route | Module |
-|-------|--------|
-| `/dashboard` | Balance overview, category breakdown, savings widget |
-| `/dashboard/expenses` | Variable daily expenses |
-| `/dashboard/fixed` | Recurring monthly fixed expenses with paid/unpaid toggle |
-| `/dashboard/income` | Income tracking for both members |
-| `/dashboard/savings` | Single savings goal with progress bar |
-| `/dashboard/budget` | Per-category monthly budget limits with alerts |
 
 ## Expense Categories
 
