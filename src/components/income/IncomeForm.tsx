@@ -5,7 +5,9 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { createIncome } from '@/actions/income'
 
-export function IncomeForm() {
+type Props = { currentMonth: string }
+
+export function IncomeForm({ currentMonth }: Props) {
   const [isPending, startTransition] = useTransition()
   const [amount, setAmount] = useState('')
   const [description, setDescription] = useState('')
@@ -19,7 +21,7 @@ export function IncomeForm() {
       await createIncome({
         amount: parsed,
         description: description.trim() || undefined,
-      })
+      }, currentMonth)
       setAmount('')
       setDescription('')
     })

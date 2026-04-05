@@ -29,7 +29,7 @@ export default async function IncomePage({ searchParams }: Props) {
           <p className="text-xs text-white/40">{incomes.length} registros</p>
         </div>
 
-        <IncomeForm />
+        <IncomeForm currentMonth={currentMonth} />
         <IncomeList incomes={incomes} />
       </main>
     </>

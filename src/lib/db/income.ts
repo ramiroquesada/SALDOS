@@ -1,5 +1,4 @@
 import { prisma } from '@/lib/prisma'
-import { getMonthKey } from '@/lib/utils'
 import type { CreateIncomeInput } from '@/types'
 
 export async function getIncomeByMonth(familyId: string, month: string) {
@@ -13,6 +12,7 @@ export async function createIncome(
   familyId: string,
   userId: string,
   earnedBy: string,
+  month: string,
   data: CreateIncomeInput
 ) {
   const date = new Date()
@@ -22,7 +22,7 @@ export async function createIncome(
       description: data.description ?? null,
       earnedBy,
       date,
-      month: getMonthKey(date),
+      month,
       familyId,
       userId,
     },

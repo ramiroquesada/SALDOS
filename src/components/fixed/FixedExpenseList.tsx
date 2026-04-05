@@ -7,9 +7,55 @@ import type { FixedExpense } from '@/types'
 
 type Props = { fixedExpenses: FixedExpense[] }
 
-export function FixedExpenseList({ fixedExpenses }: Props) {
+function FixedExpenseRow({ item }: { item: FixedExpense }) {
   const [isPending, startTransition] = useTransition()
 
+  function handleToggle() {
+    startTransition(() => toggleFixedExpensePaid(item.id, !item.paid))
+  }
+
+  function handleDelete() {
+    startTransition(() => deleteFixedExpense(item.id))
+  }
+
+  return (
+    <div className="flex items-center gap-3 rounded-2xl bg-white p-4 shadow-sm">
+      <button
+        onClick={handleToggle}
+        disabled={isPending}
+        className={`flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full border-2 transition-colors disabled:opacity-50 ${
+          item.paid
+            ? 'border-green-500 bg-green-500 text-white'
+            : 'border-gray-300 bg-white text-transparent'
+        }`}
+        aria-label={item.paid ? 'Marcar como no pagado' : 'Marcar como pagado'}
+      >
+        ✓
+      </button>
+
+      <div className="min-w-0 flex-1">
+        <p className={`truncate text-sm font-medium ${item.paid ? 'text-gray-400 line-through' : 'text-gray-900'}`}>
+          {item.category}
+        </p>
+      </div>
+
+      <span className={`font-mono text-sm font-semibold ${item.paid ? 'text-gray-400' : 'text-gray-900'}`}>
+        {formatMoney(item.amount)}
+      </span>
+
+      <button
+        onClick={handleDelete}
+        disabled={isPending}
+        className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full text-gray-300 hover:bg-red-50 hover:text-red-400 active:scale-90 disabled:opacity-50"
+        aria-label="Eliminar gasto fijo"
+      >
+        ×
+      </button>
+    </div>
+  )
+}
+
+export function FixedExpenseList({ fixedExpenses }: Props) {
   if (fixedExpenses.length === 0) {
     return (
       <div className="rounded-2xl bg-white p-6 text-center shadow-sm">
@@ -19,54 +65,10 @@ export function FixedExpenseList({ fixedExpenses }: Props) {
     )
   }
 
-  function handleToggle(id: string, currentPaid: boolean) {
-    startTransition(() => toggleFixedExpensePaid(id, !currentPaid))
-  }
-
-  function handleDelete(id: string) {
-    startTransition(() => deleteFixedExpense(id))
-  }
-
   return (
     <div className="space-y-2">
       {fixedExpenses.map((item) => (
-        <div
-          key={item.id}
-          className="flex items-center gap-3 rounded-2xl bg-white p-4 shadow-sm"
-        >
-          {/* Toggle pagado */}
-          <button
-            onClick={() => handleToggle(item.id, item.paid)}
-            disabled={isPending}
-            className={`flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full border-2 transition-colors disabled:opacity-50 ${
-              item.paid
-                ? 'border-green-500 bg-green-500 text-white'
-                : 'border-gray-300 bg-white text-transparent'
-            }`}
-            aria-label={item.paid ? 'Marcar como no pagado' : 'Marcar como pagado'}
-          >
-            ✓
-          </button>
-
-          <div className="min-w-0 flex-1">
-            <p className={`truncate text-sm font-medium ${item.paid ? 'text-gray-400 line-through' : 'text-gray-900'}`}>
-              {item.category}
-            </p>
-          </div>
-
-          <span className={`font-mono text-sm font-semibold ${item.paid ? 'text-gray-400' : 'text-gray-900'}`}>
-            {formatMoney(item.amount)}
-          </span>
-
-          <button
-            onClick={() => handleDelete(item.id)}
-            disabled={isPending}
-            className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full text-gray-300 hover:bg-red-50 hover:text-red-400 active:scale-90 disabled:opacity-50"
-            aria-label="Eliminar"
-          >
-            ×
-          </button>
-        </div>
+        <FixedExpenseRow key={item.id} item={item} />
       ))}
     </div>
   )
