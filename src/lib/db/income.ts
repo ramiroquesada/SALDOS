@@ -15,6 +15,7 @@ export async function createIncome(
   month: string,
   data: CreateIncomeInput
 ) {
+  // Ingresos siempre se registran en el momento de carga — sin backdating por simplicidad
   const date = new Date()
   return prisma.income.create({
     data: {

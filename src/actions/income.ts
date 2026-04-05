@@ -10,10 +10,12 @@ export async function createIncome(data: CreateIncomeInput, month: string) {
   const { userId, familyId, userName } = await requireAuth()
   await db.createIncome(familyId, userId, userName, month, data)
   revalidatePath('/dashboard/income')
+  revalidatePath('/dashboard')
 }
 
 export async function deleteIncome(id: string) {
   const { familyId } = await requireAuth()
   await db.deleteIncome(id, familyId)
   revalidatePath('/dashboard/income')
+  revalidatePath('/dashboard')
 }

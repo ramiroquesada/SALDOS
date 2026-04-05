@@ -9,10 +9,12 @@ export async function createExpense(data: CreateExpenseInput) {
   const { userId, familyId, userName } = await requireAuth()
   await db.createExpense(familyId, userId, userName, data)
   revalidatePath('/dashboard/expenses')
+  revalidatePath('/dashboard')
 }
 
 export async function deleteExpense(id: string) {
   const { familyId } = await requireAuth()
   await db.deleteExpense(id, familyId)
   revalidatePath('/dashboard/expenses')
+  revalidatePath('/dashboard')
 }
