@@ -17,7 +17,7 @@ export default async function DashboardPage({ searchParams }: Props) {
     await getDashboardData(familyId, currentMonth)
 
   const totalExpenses = totalVariableExpenses + totalFixedExpenses
-  const balancePositive = balance >= 0
+  const balancePositive = balance > 0
 
   return (
     <>
@@ -27,7 +27,7 @@ export default async function DashboardPage({ searchParams }: Props) {
         {/* Balance principal */}
         <div className="rounded-2xl bg-[#1a1a2e] p-5 text-white">
           <p className="text-xs text-white/60">Balance de {formatMonthLabel(currentMonth)}</p>
-          <p className={`font-mono text-3xl font-bold ${balancePositive ? 'text-green-400' : 'text-red-400'}`}>
+          <p className={`font-mono text-3xl font-bold ${balancePositive ? 'text-green-400' : balance < 0 ? 'text-red-400' : 'text-white/80'}`}>
             {balancePositive ? '+' : ''}{formatMoney(balance)}
           </p>
         </div>
@@ -85,11 +85,13 @@ export default async function DashboardPage({ searchParams }: Props) {
           </div>
         )}
 
-        {expensesByCategory.length === 0 && totalIncome === 0 && (
+        {expensesByCategory.length === 0 && (
           <div className="rounded-2xl bg-white p-6 text-center shadow-sm">
             <p className="text-2xl">🌟</p>
             <p className="mt-2 text-sm text-gray-500">
-              Registrá ingresos y gastos para ver el balance.
+              {totalIncome === 0
+                ? 'Registrá ingresos y gastos para ver el balance.'
+                : 'Sin gastos variables este mes.'}
             </p>
           </div>
         )}

@@ -12,6 +12,8 @@ export async function getDashboardData(familyId: string, month: string): Promise
   const [incomes, expenses, fixedExpenses] = await Promise.all([
     prisma.income.findMany({ where: { familyId, month }, select: { amount: true } }),
     prisma.expense.findMany({ where: { familyId, month }, select: { amount: true, category: true } }),
+    // Suma todos los gastos fijos (pagados y no pagados) — vista presupuestaria:
+    // todos los compromisos del mes se descuentan del balance, independientemente de si ya se pagaron
     prisma.fixedExpense.findMany({ where: { familyId, month }, select: { amount: true } }),
   ])
 
