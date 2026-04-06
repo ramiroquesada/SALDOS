@@ -27,6 +27,7 @@ model Family {
   incomes       Income[]
   savingsGoals  SavingsGoal[]
   budgets       Budget[]
+  categories    Category[]
   createdAt     DateTime       @default(now())
 }
 
@@ -38,10 +39,11 @@ model Expense {
   spentBy     String
   date        DateTime @default(now())
   month       String
-  familyId    String
-  family      Family   @relation(fields: [familyId], references: [id])
-  userId      String
-  createdAt   DateTime @default(now())
+  familyId        String
+  family          Family   @relation(fields: [familyId], references: [id])
+  userId          String
+  receiptImageUrl String?
+  createdAt       DateTime @default(now())
 
   @@index([familyId, month])
 }
@@ -50,10 +52,11 @@ model FixedExpense {
   id       String  @id @default(uuid())
   amount   Float
   category String
-  paid     Boolean @default(false)
-  month    String
-  familyId String
-  family   Family  @relation(fields: [familyId], references: [id])
+  paid            Boolean @default(false)
+  month           String
+  familyId        String
+  family          Family  @relation(fields: [familyId], references: [id])
+  receiptImageUrl String?
 
   @@index([familyId, month])
 }
@@ -92,4 +95,17 @@ model Budget {
 
   @@index([familyId, month])
   @@unique([familyId, category, month])
+}
+
+model Category {
+  id        String  @id @default(uuid())
+  name      String
+  emoji     String?
+  type      String  // "variable" | "fixed"
+  isDefault Boolean @default(false)
+  familyId  String
+  family    Family  @relation(fields: [familyId], references: [id])
+
+  @@unique([familyId, name, type])
+  @@index([familyId, type])
 }
