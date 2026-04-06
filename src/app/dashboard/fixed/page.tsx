@@ -5,6 +5,7 @@ import { getMonthKey, formatMoney } from '@/lib/utils'
 import { Header } from '@/components/layout/Header'
 import { FixedExpenseForm } from '@/components/fixed/FixedExpenseForm'
 import { FixedExpenseList } from '@/components/fixed/FixedExpenseList'
+import { ReceiptScannerButton } from '@/components/receipt/ReceiptScannerButton'
 
 type Props = {
   searchParams: Promise<{ month?: string }>
@@ -15,8 +16,9 @@ export default async function FixedExpensesPage({ searchParams }: Props) {
   const { month } = await searchParams
   const currentMonth = month ?? getMonthKey()
 
-  const [fixedExpenses, categories] = await Promise.all([
+  const [fixedExpenses, variableCategories, fixedCategories] = await Promise.all([
     getFixedExpensesByMonth(familyId, currentMonth),
+    getCategoriesByFamily(familyId, 'variable'),
     getCategoriesByFamily(familyId, 'fixed'),
   ])
 
@@ -41,8 +43,15 @@ export default async function FixedExpensesPage({ searchParams }: Props) {
           </div>
         </div>
 
-        <FixedExpenseForm currentMonth={currentMonth} categories={categories} />
-        <FixedExpenseList fixedExpenses={fixedExpenses} categories={categories} />
+        <ReceiptScannerButton
+          type="fixed"
+          variableCategories={variableCategories}
+          fixedCategories={fixedCategories}
+          month={currentMonth}
+        />
+
+        <FixedExpenseForm currentMonth={currentMonth} categories={fixedCategories} />
+        <FixedExpenseList fixedExpenses={fixedExpenses} categories={fixedCategories} />
       </main>
     </>
   )

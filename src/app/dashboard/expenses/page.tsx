@@ -5,6 +5,7 @@ import { getMonthKey, formatMoney } from '@/lib/utils'
 import { Header } from '@/components/layout/Header'
 import { ExpenseForm } from '@/components/expenses/ExpenseForm'
 import { ExpenseList } from '@/components/expenses/ExpenseList'
+import { ReceiptScannerButton } from '@/components/receipt/ReceiptScannerButton'
 
 type Props = {
   searchParams: Promise<{ month?: string }>
@@ -15,9 +16,10 @@ export default async function ExpensesPage({ searchParams }: Props) {
   const { month } = await searchParams
   const currentMonth = month ?? getMonthKey()
 
-  const [expenses, categories] = await Promise.all([
+  const [expenses, variableCategories, fixedCategories] = await Promise.all([
     getExpensesByMonth(familyId, currentMonth),
     getCategoriesByFamily(familyId, 'variable'),
+    getCategoriesByFamily(familyId, 'fixed'),
   ])
 
   const total = expenses.reduce((sum, e) => sum + e.amount, 0)
@@ -33,8 +35,15 @@ export default async function ExpensesPage({ searchParams }: Props) {
           <p className="text-xs text-white/40">{expenses.length} gastos registrados</p>
         </div>
 
-        <ExpenseForm categories={categories} />
-        <ExpenseList expenses={expenses} categories={categories} />
+        <ReceiptScannerButton
+          type="variable"
+          variableCategories={variableCategories}
+          fixedCategories={fixedCategories}
+          month={currentMonth}
+        />
+
+        <ExpenseForm categories={variableCategories} />
+        <ExpenseList expenses={expenses} categories={variableCategories} />
       </main>
     </>
   )
