@@ -1,6 +1,6 @@
 # Nuestras Finanzas 💰
 
-App de finanzas familiares para parejas. Mobile-first, uso diario, datos compartidos entre dos usuarios en tiempo real.
+App de finanzas familiares para parejas. Mobile-first, uso diario, datos compartidos entre dos usuarios.
 
 ## Funcionalidades
 
@@ -8,16 +8,30 @@ App de finanzas familiares para parejas. Mobile-first, uso diario, datos compart
 
 | Módulo | Descripción |
 |--------|-------------|
-| 🏠 **Dashboard** | Balance del mes: ingresos − gastos variables − gastos fijos. Breakdown por categoría con barras de progreso. |
+| 🏠 **Dashboard** | Balance del mes: ingresos − gastos variables − gastos fijos. Breakdown por categoría. |
 | 💸 **Gastos variables** | Cargá gastos del día a día por categoría. Navegación por mes. |
-| 📋 **Gastos fijos** | Alquiler, servicios, seguros. Toggle pagado/no pagado por ítem. Resumen de lo pagado vs pendiente. |
+| 📋 **Gastos fijos** | Alquiler, servicios, seguros. Toggle pagado/no pagado por ítem. |
 | 💵 **Ingresos** | Registrá ingresos de cada miembro de la pareja. |
+| 🎯 **Ahorro** | Meta de ahorro familiar con barra de progreso. Depositá montos y configurá el objetivo. |
+| 📊 **Presupuesto** | Límites mensuales por categoría con semáforo verde/amarillo/rojo. |
+| 🔗 **Invitar pareja** | Link de invitación para vincular al segundo usuario. Se accede desde el dashboard. |
 
-### 🚧 Próximamente (Fase 3)
+### 🗺️ Roadmap
 
-- 🎯 **Ahorro** — Meta de ahorro con barra de progreso
-- 📊 **Presupuesto** — Límites por categoría con alertas semafóricas
-- 🔗 **Invitar pareja** — Link de invitación para vincular al segundo usuario
+Ideas para próximas iteraciones, ordenadas por impacto:
+
+| Prioridad | Feature | Descripción |
+|-----------|---------|-------------|
+| 🔥 Alta | **Editar gastos** | Modificar monto, categoría o fecha de un gasto ya registrado |
+| 🔥 Alta | **PWA / instalable** | Manifest + service worker para instalar en el celular como app nativa |
+| 🔥 Alta | **Deploy a Vercel** | App live con dominio propio y variables de entorno de producción |
+| 🟡 Media | **Copiar fijos del mes anterior** | Auto-rellenar gastos fijos copiando los del mes previo |
+| 🟡 Media | **Múltiples metas de ahorro** | Vacaciones, auto, fondo de emergencia, etc. |
+| 🟡 Media | **Historial de depósitos** | Ver movimientos individuales de la meta de ahorro |
+| 🟡 Media | **Gráficos de tendencia** | Evolución mensual de ingresos y gastos en un chart |
+| 🟢 Baja | **Exportar a CSV** | Descargar el historial del mes en planilla |
+| 🟢 Baja | **Notas en gastos** | Campo de descripción más visible y buscable |
+| 🟢 Baja | **Dark mode** | Tema oscuro con toggle en el header |
 
 ## Stack
 
@@ -79,7 +93,7 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 
 ```bash
 # Crear las tablas en Supabase
-DATABASE_URL="<tu-DIRECT_URL>" npx prisma db push
+npx prisma db push
 
 # Regenerar el cliente Prisma
 npx prisma generate
@@ -89,7 +103,9 @@ npx prisma generate
 
 En el [Supabase Dashboard](https://supabase.com/dashboard):
 1. **Authentication → Providers → Google** → habilitar con Client ID y Secret de Google Cloud Console
-2. **Authentication → URL Configuration → Redirect URLs** → agregar `http://localhost:3000/auth/callback`
+2. **Authentication → URL Configuration → Redirect URLs** → agregar:
+   - `http://localhost:3000/auth/callback`
+   - `http://localhost:3000/auth/callback*` (para soportar `?invite=CODE`)
 
 En Google Cloud Console, agregar como **Authorized redirect URI**:
 ```
@@ -104,16 +120,21 @@ npm run dev
 
 Abrir [http://localhost:3000](http://localhost:3000)
 
+Para acceder desde el celular en la misma red:
+
+```bash
+npx next dev --hostname 0.0.0.0
+```
+
 ## Comandos útiles
 
 ```bash
 npm run dev                          # Dev server
-npx next dev --hostname 0.0.0.0     # Dev server accesible desde el celular en la misma red
-npm run build                        # Build de producción
+npm run build && npm run start       # Build de producción
 npm test                             # Tests (Vitest)
 
 npx prisma studio                    # Explorar la base de datos visualmente
-npx prisma migrate dev --name <name> # Nueva migración
+npx prisma db push                   # Sincronizar schema con la DB (sin migraciones)
 npx prisma generate                  # Regenerar cliente después de cambios en el schema
 ```
 
@@ -121,18 +142,22 @@ npx prisma generate                  # Regenerar cliente después de cambios en 
 
 ```
 src/
-├── actions/          # Server Actions (mutaciones: crear, editar, eliminar)
+├── actions/          # Server Actions (mutaciones)
+│   ├── expenses.ts, fixed-expenses.ts, income.ts
+│   ├── savings.ts, budget.ts, family.ts
 ├── app/              # Rutas Next.js (App Router)
-│   ├── auth/         # Login + OAuth callback
-│   └── dashboard/    # Todas las páginas autenticadas
-├── components/       # Componentes React
-│   ├── ui/           # Primitivos (Button, Input, Card)
+│   ├── auth/         # Login + OAuth callback (soporta ?invite=CODE)
+│   ├── dashboard/    # Todas las páginas autenticadas
+│   └── invite/[code] # Página pública de invitación
+├── components/
+│   ├── ui/           # Button, Input, Card
 │   ├── layout/       # Header, BottomNav, MonthSelector
-│   ├── expenses/     # Formulario + lista de gastos variables
-│   ├── fixed/        # Formulario + lista de gastos fijos
-│   └── income/       # Formulario + lista de ingresos
+│   ├── expenses/, fixed/, income/
+│   ├── savings/      # SavingsGoalCard, SavingsGoalForm, DepositForm
+│   ├── budget/       # BudgetList con inline editing y semáforo
+│   └── invite/       # InviteCard, JoinWithGoogleButton, JoinFamilyButton
 ├── lib/
-│   ├── db/           # Queries Prisma puras (sin contexto de request)
+│   ├── db/           # Queries Prisma puras (expenses, fixed, income, savings, budget, family, dashboard)
 │   ├── supabase/     # Clientes Supabase (server + browser)
 │   ├── auth.ts       # requireAuth() → { userId, familyId, userName }
 │   ├── constants.ts  # Categorías y colores
@@ -145,18 +170,19 @@ src/
 ```prisma
 User         → pertenece a una Family
 Family       → tiene Expenses, FixedExpenses, Incomes, SavingsGoals, Budgets
+               inviteCode: UUID para el link de invitación
 Expense      → gasto variable (amount, category, spentBy, month)
 FixedExpense → gasto fijo mensual (amount, category, paid, month)
 Income       → ingreso (amount, earnedBy, month)
-SavingsGoal  → meta de ahorro (target, saved)
-Budget       → límite por categoría (category, limit, month)
+SavingsGoal  → meta de ahorro de la familia (name, target, saved)
+Budget       → límite mensual por categoría (category, limit, month)
 ```
 
 Todos los registros financieros pertenecen a la `Family`, no al `User` individualmente.
 
 ## Deploy
 
-El proyecto está configurado para deploy en [Vercel](https://vercel.com/). Conectar el repositorio y agregar las variables de entorno en el dashboard de Vercel (las mismas que en `.env.local`, con `NEXT_PUBLIC_APP_URL` apuntando al dominio de producción).
+El proyecto está configurado para deploy en [Vercel](https://vercel.com/). Conectar el repositorio y agregar las variables de entorno en el dashboard de Vercel (las mismas que `.env.local`, con `NEXT_PUBLIC_APP_URL` apuntando al dominio de producción).
 
 ---
 

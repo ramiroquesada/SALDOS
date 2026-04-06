@@ -23,12 +23,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `/dashboard/income` — ingresos por miembro
 - `/dashboard` — balance real del mes: ingresos − variables − fijos + breakdown por categoría
 
-### ⏳ Fase 3 — Pendiente
+### ✅ Fase 3 — Completada (2026-04-05)
 
-Ahorro + Presupuesto + Invitar pareja.
-- `/dashboard/savings` — meta de ahorro con barra de progreso
-- `/dashboard/budget` — límites por categoría con alertas semafóricas
-- `/invite/[code]` — página pública para que la pareja se una a la familia
+- `/dashboard/savings` — meta de ahorro con barra de progreso, depósitos, configuración de nombre y monto
+- `/dashboard/budget` — límites por categoría con semáforo (verde/amarillo/rojo), inline editing
+- `/invite/[code]` — página pública para unirse a la familia (flujo autenticado y no autenticado)
+- InviteCard en el dashboard con link copiable; OAuth callback soporta `?invite=CODE`
 
 ## Stack
 
@@ -84,20 +84,26 @@ src/
 ├── actions/
 │   ├── expenses.ts                  # createExpense, deleteExpense
 │   ├── fixed-expenses.ts            # createFixedExpense, toggleFixedExpensePaid, deleteFixedExpense
-│   └── income.ts                    # createIncome, deleteIncome
+│   ├── income.ts                    # createIncome, deleteIncome
+│   ├── savings.ts                   # updateSavingsGoal, addToSavings
+│   ├── budget.ts                    # setBudget, removeBudget
+│   └── family.ts                    # joinFamilyByCode
 ├── app/
 │   ├── page.tsx                     # Root redirect (auth → /dashboard, no auth → /auth/login)
 │   ├── layout.tsx                   # Root layout (Geist font, lang="es")
 │   ├── globals.css                  # Global styles + Tailwind CSS 4
 │   ├── auth/
 │   │   ├── login/page.tsx           # Login page with Google button
-│   │   └── callback/route.ts        # OAuth callback → sync Prisma User+Family
-│   └── dashboard/
-│       ├── layout.tsx               # Dashboard shell: wraps children + BottomNav
-│       ├── page.tsx                 # Balance overview + category breakdown
-│       ├── expenses/page.tsx        # Variable expenses list + form
-│       ├── fixed/page.tsx           # Fixed expenses list + paid/unpaid toggle
-│       └── income/page.tsx          # Income list + form
+│   │   └── callback/route.ts        # OAuth callback → sync Prisma User+Family; handles ?invite=CODE
+│   ├── dashboard/
+│   │   ├── layout.tsx               # Dashboard shell: wraps children + BottomNav
+│   │   ├── page.tsx                 # Balance overview + category breakdown + invite card
+│   │   ├── expenses/page.tsx        # Variable expenses list + form
+│   │   ├── fixed/page.tsx           # Fixed expenses list + paid/unpaid toggle
+│   │   ├── income/page.tsx          # Income list + form
+│   │   ├── savings/page.tsx         # Savings goal + deposit form + goal config
+│   │   └── budget/page.tsx          # Per-category budget limits + semaphore bars
+│   └── invite/[code]/page.tsx       # Public invite page (join family)
 ├── components/
 │   ├── auth/GoogleLoginButton.tsx
 │   ├── expenses/
@@ -109,9 +115,19 @@ src/
 │   ├── income/
 │   │   ├── IncomeForm.tsx
 │   │   └── IncomeList.tsx           # Per-row useTransition for delete
+│   ├── savings/
+│   │   ├── SavingsGoalCard.tsx      # Progress bar card (dark navy)
+│   │   ├── SavingsGoalForm.tsx      # Set name + target amount
+│   │   └── DepositForm.tsx          # Add funds to savings
+│   ├── budget/
+│   │   └── BudgetList.tsx           # All categories with inline edit + semaphore bar
+│   ├── invite/
+│   │   ├── InviteCard.tsx           # Copyable invite link card
+│   │   ├── JoinWithGoogleButton.tsx # OAuth button with ?invite=CODE in redirectTo
+│   │   └── JoinFamilyButton.tsx     # Server Action button for authenticated users
 │   ├── layout/
 │   │   ├── BottomNav.tsx
-│   │   ├── Header.tsx
+│   │   ├── Header.tsx               # currentMonth prop is optional
 │   │   └── MonthSelector.tsx
 │   └── ui/
 │       ├── Button.tsx               # primary/ghost/danger, sm/md/lg, loading state
@@ -125,13 +141,16 @@ src/
 │   │   ├── expenses.ts              # Pure Prisma queries for variable expenses
 │   │   ├── fixed-expenses.ts        # Pure Prisma queries for fixed expenses
 │   │   ├── income.ts                # Pure Prisma queries for income
+│   │   ├── savings.ts               # getOrCreateSavingsGoal, updateSavingsGoalMeta, addToSaved
+│   │   ├── budget.ts                # getBudgetsWithSpent, upsertBudget, deleteBudget
+│   │   ├── family.ts                # getFamilyInviteInfo, getFamilyByInviteCode, joinFamily
 │   │   └── dashboard.ts             # getDashboardData() — parallel queries, balance calc
 │   ├── prisma.ts                    # PrismaClient singleton (with PrismaPg adapter)
 │   ├── supabase/
 │   │   ├── client.ts
 │   │   └── server.ts
 │   └── utils.ts                     # formatMoney, getMonthKey, formatMonthLabel, cn, prevMonth, nextMonth
-├── types/index.ts                   # Expense, FixedExpense, Income + input types
+├── types/index.ts                   # Expense, FixedExpense, Income, SavingsGoal, Budget + input types
 middleware.ts                        # Protects /dashboard/*, redirects /auth/login if unauthenticated
 ```
 
