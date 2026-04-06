@@ -2,39 +2,19 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Agregar un scanner de boletas con Gemini 1.5 Flash que extrae ítems individuales de fotos, permite al usuario revisarlos y confirmarlos como gastos, y guarda la foto en Supabase Storage como respaldo.
+**Goal:** Agregar un scanner de boletas con Gemini 1.5 Flash que extrae ítems individuales de fotos, permite al usuario revisarlos y confirmarlos como gastos. Las fotos se procesan en memoria y se descartan — no se guardan en ningún servidor.
 
-**Architecture:** El usuario sube fotos en un modal de 3 pasos (upload → procesando → revisar). El cliente comprime las imágenes con Canvas API y las envía al Route Handler `/api/receipts/scan`, que llama Gemini 1.5 Flash y retorna los ítems en JSON. El usuario edita y confirma; el cliente sube las imágenes a Supabase Storage, obtiene una URL firmada, y llama Server Actions para crear los gastos con `receiptImageUrl`.
+**Architecture:** El usuario sube fotos en un modal de 3 pasos (upload → procesando → revisar). El cliente comprime las imágenes con Canvas API y las envía al Route Handler `/api/receipts/scan`, que llama Gemini 1.5 Flash y retorna los ítems en JSON. El usuario edita y confirma; se llaman Server Actions para crear los gastos. Las fotos se descartan automáticamente al cerrar el modal (viven solo en memoria del browser).
 
-**Tech Stack:** Next.js 15 App Router, React 19, Tailwind CSS 4, `@google/generative-ai`, Supabase Storage (browser client), TypeScript
+**Tech Stack:** Next.js 15 App Router, React 19, Tailwind CSS 4, `@google/generative-ai`, TypeScript
 
 **Working directory:** `PROYECTO SALDOS/` (all commands from `C:\Users\ramir\Desktop\SALDOS\PROYECTO SALDOS`)
 
 ---
 
-## Prerequisitos manuales (antes de Task 1)
+## Prerequisito manual (antes de Task 1)
 
-El usuario debe hacer estas dos cosas antes de ejecutar el plan:
-
-**1. Crear el bucket `receipts` en Supabase Storage:**
-- Ir a Supabase Dashboard → Storage → New bucket
-- Name: `receipts`
-- Toggle: **Private** (no público)
-- Click "Save"
-- Ir a Policies → New policy → For full customization:
-  ```sql
-  -- Permite a usuarios autenticados subir archivos
-  CREATE POLICY "Authenticated users can upload receipts"
-  ON storage.objects FOR INSERT TO authenticated
-  WITH CHECK (bucket_id = 'receipts');
-  
-  -- Permite a usuarios autenticados leer sus archivos
-  CREATE POLICY "Authenticated users can read receipts"
-  ON storage.objects FOR SELECT TO authenticated
-  USING (bucket_id = 'receipts');
-  ```
-
-**2. Agregar `GEMINI_API_KEY` en `.env.local`:**
+Agregar `GEMINI_API_KEY` en `.env.local`:
 ```env
 GEMINI_API_KEY=<tu clave de Google AI Studio>
 ```
@@ -50,9 +30,9 @@ GEMINI_API_KEY=<tu clave de Google AI Studio>
 | `src/components/receipt/compressImage.ts` | Canvas API: redimensiona a max 1200px, JPEG 0.75 |
 | `src/components/receipt/ReceiptUploadStep.tsx` | Paso 1: drag & drop + file input + thumbnails |
 | `src/components/receipt/ReceiptProcessingStep.tsx` | Paso 2: spinner + manejo de errores |
-| `src/components/receipt/ReceiptReviewStep.tsx` | Paso 3: lista editable + upload a Storage + confirm |
+| `src/components/receipt/ReceiptReviewStep.tsx` | Paso 3: lista editable de ítems + confirmar |
 | `src/components/receipt/ReceiptScannerModal.tsx` | Wrapper modal: maneja estado de 3 pasos |
-| `src/components/receipt/ReceiptScannerButton.tsx` | Client island: botón + opens modal con estado |
+| `src/components/receipt/ReceiptScannerButton.tsx` | Client island: botón que abre el modal |
 | `src/app/api/receipts/scan/route.ts` | Route Handler: recibe FormData, llama Gemini, retorna JSON |
 | `src/actions/receipts.ts` | createExpensesFromReceipt, createFixedExpensesFromReceipt |
 
@@ -146,9 +126,7 @@ git commit -m "feat: install @google/generative-ai and add compressImage canvas 
 **Files:**
 - Create: `src/app/api/receipts/scan/route.ts`
 
-- [ ] **Step 1: Crear el directorio y el Route Handler**
-
-Crear `src/app/api/receipts/scan/route.ts` con el siguiente contenido exacto:
+- [ ] **Step 1: Crear `src/app/api/receipts/scan/route.ts`**
 
 ```typescript
 import { NextRequest, NextResponse } from 'next/server'
@@ -292,6 +270,8 @@ git commit -m "feat: add POST /api/receipts/scan route handler with Gemini 1.5 F
 
 - [ ] **Step 1: Crear `src/actions/receipts.ts`**
 
+Las fotos no se guardan — `receiptImageUrl` queda en `null` para los gastos creados desde el scanner.
+
 ```typescript
 'use server'
 
@@ -308,7 +288,6 @@ type ScannedItem = {
 
 export async function createExpensesFromReceipt(
   items: ScannedItem[],
-  receiptImageUrl: string | null,
   month: string
 ) {
   const { familyId, userName } = await requireAuth()
@@ -324,7 +303,7 @@ export async function createExpensesFromReceipt(
       description: item.name,
       spentBy: userName,
       month,
-      receiptImageUrl,
+      receiptImageUrl: null,
     })),
   })
 
@@ -334,7 +313,6 @@ export async function createExpensesFromReceipt(
 
 export async function createFixedExpensesFromReceipt(
   items: ScannedItem[],
-  receiptImageUrl: string | null,
   month: string
 ) {
   const { familyId } = await requireAuth()
@@ -349,7 +327,7 @@ export async function createFixedExpensesFromReceipt(
       category: item.category,
       paid: false,
       month,
-      receiptImageUrl,
+      receiptImageUrl: null,
     })),
   })
 
@@ -555,7 +533,7 @@ git commit -m "feat: add ReceiptProcessingStep with spinner and error state"
 **Files:**
 - Create: `src/components/receipt/ReceiptReviewStep.tsx`
 
-Este componente maneja la lista editable de ítems, la subida a Supabase Storage y la creación de gastos al confirmar.
+Este componente muestra la lista editable de ítems y llama las Server Actions al confirmar. Sin subida de imágenes.
 
 - [ ] **Step 1: Crear `src/components/receipt/ReceiptReviewStep.tsx`**
 
@@ -563,7 +541,6 @@ Este componente maneja la lista editable de ítems, la subida a Supabase Storage
 'use client'
 
 import { useState, useTransition } from 'react'
-import { createClient } from '@/lib/supabase/client'
 import { createExpensesFromReceipt, createFixedExpensesFromReceipt } from '@/actions/receipts'
 import type { CategoryRow } from '@/types'
 
@@ -576,10 +553,8 @@ type ScannedItem = {
 
 type Props = {
   items: ScannedItem[]
-  files: File[]
   variableCategories: CategoryRow[]
   fixedCategories: CategoryRow[]
-  familyId: string
   month: string
   onAddMorePhotos: () => void
   onClose: () => void
@@ -587,10 +562,8 @@ type Props = {
 
 export function ReceiptReviewStep({
   items: initialItems,
-  files,
   variableCategories,
   fixedCategories,
-  familyId,
   month,
   onAddMorePhotos,
   onClose,
@@ -612,35 +585,13 @@ export function ReceiptReviewStep({
     return type === 'variable' ? variableCategories : fixedCategories
   }
 
-  async function handleConfirm() {
+  function handleConfirm() {
     startTransition(async () => {
-      // Upload first image to Supabase Storage; store signed URL (1 year)
-      let receiptImageUrl: string | null = null
-      if (files.length > 0) {
-        const supabase = createClient()
-        const file = files[0]
-        const path = `${familyId}/${month}-${Date.now()}.jpg`
-        const { error: uploadError } = await supabase.storage
-          .from('receipts')
-          .upload(path, file)
-        if (!uploadError) {
-          const { data: signedData } = await supabase.storage
-            .from('receipts')
-            .createSignedUrl(path, 31_536_000) // 1 year in seconds
-          receiptImageUrl = signedData?.signedUrl ?? null
-        }
-      }
-
-      // Create variable expenses
       const hasVariable = items.some((i) => i.type === 'variable')
       const hasFixed = items.some((i) => i.type === 'fixed')
 
-      if (hasVariable) {
-        await createExpensesFromReceipt(items, receiptImageUrl, month)
-      }
-      if (hasFixed) {
-        await createFixedExpensesFromReceipt(items, receiptImageUrl, month)
-      }
+      if (hasVariable) await createExpensesFromReceipt(items, month)
+      if (hasFixed) await createFixedExpensesFromReceipt(items, month)
 
       onClose()
     })
@@ -705,7 +656,6 @@ export function ReceiptReviewStep({
                   onChange={(e) =>
                     updateItem(i, {
                       type: e.target.value as 'variable' | 'fixed',
-                      // Reset category to first of new type
                       category:
                         e.target.value === 'variable'
                           ? (variableCategories[0]?.name ?? '')
@@ -759,7 +709,7 @@ Expected: sin output.
 
 ```bash
 git add src/components/receipt/ReceiptReviewStep.tsx
-git commit -m "feat: add ReceiptReviewStep with editable items, Supabase Storage upload and confirm"
+git commit -m "feat: add ReceiptReviewStep with editable items list and confirm"
 ```
 
 ---
@@ -794,7 +744,6 @@ type Props = {
   type: 'variable' | 'fixed'
   variableCategories: CategoryRow[]
   fixedCategories: CategoryRow[]
-  familyId: string
   month: string
   onClose: () => void
 }
@@ -809,7 +758,6 @@ export function ReceiptScannerModal({
   type,
   variableCategories,
   fixedCategories,
-  familyId,
   month,
   onClose,
 }: Props) {
@@ -841,11 +789,6 @@ export function ReceiptScannerModal({
       setError(msg)
       // Stay on processing step to show error; user clicks "Volver" to go back
     }
-  }
-
-  function handleAddMorePhotos() {
-    // Go back to upload — keep existing files and items
-    setStep('upload')
   }
 
   return (
@@ -890,12 +833,10 @@ export function ReceiptScannerModal({
           {step === 'review' && (
             <ReceiptReviewStep
               items={items}
-              files={files}
               variableCategories={variableCategories}
               fixedCategories={fixedCategories}
-              familyId={familyId}
               month={month}
-              onAddMorePhotos={handleAddMorePhotos}
+              onAddMorePhotos={() => setStep('upload')}
               onClose={onClose}
             />
           )}
@@ -908,8 +849,6 @@ export function ReceiptScannerModal({
 
 - [ ] **Step 2: Crear `src/components/receipt/ReceiptScannerButton.tsx`**
 
-Este es el "client island" — acepta props del Server Component y maneja el estado de apertura del modal.
-
 ```typescript
 'use client'
 
@@ -921,7 +860,6 @@ type Props = {
   type: 'variable' | 'fixed'
   variableCategories: CategoryRow[]
   fixedCategories: CategoryRow[]
-  familyId: string
   month: string
 }
 
@@ -929,7 +867,6 @@ export function ReceiptScannerButton({
   type,
   variableCategories,
   fixedCategories,
-  familyId,
   month,
 }: Props) {
   const [open, setOpen] = useState(false)
@@ -949,7 +886,6 @@ export function ReceiptScannerButton({
           type={type}
           variableCategories={variableCategories}
           fixedCategories={fixedCategories}
-          familyId={familyId}
           month={month}
           onClose={() => setOpen(false)}
         />
@@ -1030,7 +966,6 @@ export default async function ExpensesPage({ searchParams }: Props) {
           type="variable"
           variableCategories={variableCategories}
           fixedCategories={fixedCategories}
-          familyId={familyId}
           month={currentMonth}
         />
 
@@ -1094,7 +1029,6 @@ export default async function FixedExpensesPage({ searchParams }: Props) {
           type="fixed"
           variableCategories={variableCategories}
           fixedCategories={fixedCategories}
-          familyId={familyId}
           month={currentMonth}
         />
 
@@ -1144,20 +1078,19 @@ git commit -m "feat: add Escanear boleta button to expenses and fixed pages"
 - ✅ Categorías dinámicas de la familia incluidas en el prompt → Task 2
 - ✅ Paso 2: spinner + error handling + botón "Volver" → Task 5
 - ✅ Paso 3: campos editables (nombre, monto, categoría, tipo) → Task 6
-- ✅ Badge editable Variable/Fijo en ReceiptReviewStep → Task 6
+- ✅ Badge editable Variable/Fijo → Task 6
 - ✅ Botón × por ítem → Task 6
 - ✅ Botón "Agregar foto más" → Task 6 + 7
-- ✅ Subida a Supabase Storage (primera imagen, bucket `receipts`) → Task 6
-- ✅ URL firmada 1 año → Task 6
+- ✅ Sin subida de imágenes — fotos descartadas al cerrar → Tasks 3, 6
 - ✅ Server Actions createExpensesFromReceipt + createFixedExpensesFromReceipt → Task 3
-- ✅ receiptImageUrl guardado en Expense y FixedExpense → Task 3
 - ✅ Modal bottom-sheet en mobile, card centrado en desktop → Task 7
-- ✅ GEMINI_API_KEY env var → Prerequisitos manuales
+- ✅ GEMINI_API_KEY env var → Prerequisito manual
 
-**Placeholder scan:** ninguno encontrado — todo el código está escrito.
+**Placeholder scan:** ninguno — todo el código está escrito.
 
 **Type consistency:**
-- `ScannedItem` definido de forma idéntica en Tasks 2, 3, 6, 7 (inline type — consistent)
+- `ScannedItem` inline type consistente en Tasks 2, 3, 6, 7 ✅
 - `CategoryRow` importado de `@/types` en Tasks 6, 7, 8 ✅
-- `createExpensesFromReceipt(items, receiptImageUrl, month)` — misma firma en Task 3 y uso en Task 6 ✅
-- `ReceiptScannerModal` props: `type, variableCategories, fixedCategories, familyId, month, onClose` — consistent entre Task 7 y Task 8 ✅
+- `createExpensesFromReceipt(items, month)` — misma firma en Task 3 y uso en Task 6 ✅
+- `ReceiptScannerModal` props: `type, variableCategories, fixedCategories, month, onClose` — consistent entre Task 7 y Task 8 ✅
+- `ReceiptScannerButton` no recibe `familyId` — lo eliminamos de toda la cadena ✅
