@@ -4,13 +4,14 @@ import { useTransition } from 'react'
 import { formatMoney } from '@/lib/utils'
 import { CATEGORY_COLORS } from '@/lib/constants'
 import { deleteExpense } from '@/actions/expenses'
-import type { Expense } from '@/types'
+import type { Expense, CategoryRow } from '@/types'
 
 type ExpenseListProps = {
   expenses: Expense[]
+  categories?: CategoryRow[]
 }
 
-export function ExpenseList({ expenses }: ExpenseListProps) {
+export function ExpenseList({ expenses, categories: _categories }: ExpenseListProps) {
   const [isPending, startTransition] = useTransition()
 
   if (expenses.length === 0) {

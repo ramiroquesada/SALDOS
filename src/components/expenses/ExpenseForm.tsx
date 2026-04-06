@@ -3,14 +3,16 @@
 import { useState, useTransition } from 'react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
-import { VARIABLE_CATEGORIES } from '@/lib/constants'
 import { createExpense } from '@/actions/expenses'
+import type { CategoryRow } from '@/types'
 
-export function ExpenseForm() {
+type Props = { categories: CategoryRow[] }
+
+export function ExpenseForm({ categories }: Props) {
   const [isPending, startTransition] = useTransition()
   const [amount, setAmount] = useState('')
   const [description, setDescription] = useState('')
-  const [category, setCategory] = useState(VARIABLE_CATEGORIES[0])
+  const [category, setCategory] = useState(categories[0]?.name ?? '')
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -18,14 +20,10 @@ export function ExpenseForm() {
     if (!parsed || parsed <= 0) return
 
     startTransition(async () => {
-      await createExpense({
-        amount: parsed,
-        description: description.trim() || undefined,
-        category,
-      })
+      await createExpense({ amount: parsed, description: description.trim() || undefined, category })
       setAmount('')
       setDescription('')
-      setCategory(VARIABLE_CATEGORIES[0])
+      setCategory(categories[0]?.name ?? '')
     })
   }
 
@@ -64,9 +62,9 @@ export function ExpenseForm() {
           onChange={(e) => setCategory(e.target.value)}
           className="h-11 rounded-xl border border-gray-200 bg-white px-4 text-sm text-gray-900 focus:border-[#1a1a2e] focus:outline-none focus:ring-1 focus:ring-[#1a1a2e]"
         >
-          {VARIABLE_CATEGORIES.map((cat) => (
-            <option key={cat} value={cat}>
-              {cat}
+          {categories.map((cat) => (
+            <option key={cat.id} value={cat.name}>
+              {cat.emoji ? `${cat.emoji} ` : ''}{cat.name}
             </option>
           ))}
         </select>

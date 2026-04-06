@@ -3,9 +3,9 @@
 import { useTransition } from 'react'
 import { formatMoney } from '@/lib/utils'
 import { toggleFixedExpensePaid, deleteFixedExpense } from '@/actions/fixed-expenses'
-import type { FixedExpense } from '@/types'
+import type { FixedExpense, CategoryRow } from '@/types'
 
-type Props = { fixedExpenses: FixedExpense[] }
+type Props = { fixedExpenses: FixedExpense[]; categories?: CategoryRow[] }
 
 function FixedExpenseRow({ item }: { item: FixedExpense }) {
   const [isPending, startTransition] = useTransition()
@@ -55,7 +55,7 @@ function FixedExpenseRow({ item }: { item: FixedExpense }) {
   )
 }
 
-export function FixedExpenseList({ fixedExpenses }: Props) {
+export function FixedExpenseList({ fixedExpenses, categories: _categories }: Props) {
   if (fixedExpenses.length === 0) {
     return (
       <div className="rounded-2xl bg-white p-6 text-center shadow-sm">

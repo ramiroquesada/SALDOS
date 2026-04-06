@@ -1,5 +1,6 @@
 import { requireAuth } from '@/lib/auth'
 import { getFixedExpensesByMonth } from '@/lib/db/fixed-expenses'
+import { getCategoriesByFamily } from '@/lib/db/categories'
 import { getMonthKey, formatMoney } from '@/lib/utils'
 import { Header } from '@/components/layout/Header'
 import { FixedExpenseForm } from '@/components/fixed/FixedExpenseForm'
@@ -14,7 +15,11 @@ export default async function FixedExpensesPage({ searchParams }: Props) {
   const { month } = await searchParams
   const currentMonth = month ?? getMonthKey()
 
-  const fixedExpenses = await getFixedExpensesByMonth(familyId, currentMonth)
+  const [fixedExpenses, categories] = await Promise.all([
+    getFixedExpensesByMonth(familyId, currentMonth),
+    getCategoriesByFamily(familyId, 'fixed'),
+  ])
+
   const totalPaid = fixedExpenses.filter((e) => e.paid).reduce((sum, e) => sum + e.amount, 0)
   const totalPending = fixedExpenses.filter((e) => !e.paid).reduce((sum, e) => sum + e.amount, 0)
 
@@ -23,7 +28,6 @@ export default async function FixedExpensesPage({ searchParams }: Props) {
       <Header title="Gastos fijos" currentMonth={currentMonth} />
 
       <main className="space-y-4 px-4 py-4">
-        {/* Resumen */}
         <div className="rounded-2xl bg-[#1a1a2e] p-4 text-white">
           <div className="flex justify-between">
             <div>
@@ -37,8 +41,8 @@ export default async function FixedExpensesPage({ searchParams }: Props) {
           </div>
         </div>
 
-        <FixedExpenseForm currentMonth={currentMonth} />
-        <FixedExpenseList fixedExpenses={fixedExpenses} />
+        <FixedExpenseForm currentMonth={currentMonth} categories={categories} />
+        <FixedExpenseList fixedExpenses={fixedExpenses} categories={categories} />
       </main>
     </>
   )

@@ -3,15 +3,18 @@
 import { useState, useTransition } from 'react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
-import { FIXED_CATEGORIES } from '@/lib/constants'
 import { createFixedExpense } from '@/actions/fixed-expenses'
+import type { CategoryRow } from '@/types'
 
-type Props = { currentMonth: string }
+type Props = {
+  currentMonth: string
+  categories: CategoryRow[]
+}
 
-export function FixedExpenseForm({ currentMonth }: Props) {
+export function FixedExpenseForm({ currentMonth, categories }: Props) {
   const [isPending, startTransition] = useTransition()
   const [amount, setAmount] = useState('')
-  const [category, setCategory] = useState<string>(FIXED_CATEGORIES[0])
+  const [category, setCategory] = useState(categories[0]?.name ?? '')
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -21,7 +24,7 @@ export function FixedExpenseForm({ currentMonth }: Props) {
     startTransition(async () => {
       await createFixedExpense({ amount: parsed, category }, currentMonth)
       setAmount('')
-      setCategory(FIXED_CATEGORIES[0])
+      setCategory(categories[0]?.name ?? '')
     })
   }
 
@@ -51,9 +54,9 @@ export function FixedExpenseForm({ currentMonth }: Props) {
           onChange={(e) => setCategory(e.target.value)}
           className="h-11 rounded-xl border border-gray-200 bg-white px-4 text-sm text-gray-900 focus:border-[#1a1a2e] focus:outline-none focus:ring-1 focus:ring-[#1a1a2e]"
         >
-          {FIXED_CATEGORIES.map((cat) => (
-            <option key={cat} value={cat}>
-              {cat}
+          {categories.map((cat) => (
+            <option key={cat.id} value={cat.name}>
+              {cat.emoji ? `${cat.emoji} ` : ''}{cat.name}
             </option>
           ))}
         </select>
