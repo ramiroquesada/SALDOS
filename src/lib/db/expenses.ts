@@ -36,3 +36,14 @@ export async function deleteExpense(id: string, familyId: string) {
     where: { id, familyId },
   })
 }
+
+export async function updateExpense(
+  id: string,
+  familyId: string,
+  data: { amount?: number; description?: string | null; category?: string }
+) {
+  return prisma.expense.updateMany({
+    where: { id, familyId },
+    data,
+  })
+}

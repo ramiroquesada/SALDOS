@@ -37,3 +37,14 @@ export async function deleteFixedExpense(id: string, familyId: string) {
     where: { id, familyId },
   })
 }
+
+export async function updateFixedExpense(
+  id: string,
+  familyId: string,
+  data: { amount?: number; category?: string }
+) {
+  return prisma.fixedExpense.updateMany({
+    where: { id, familyId },
+    data,
+  })
+}
