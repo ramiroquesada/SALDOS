@@ -13,6 +13,5 @@ export default defineConfig({
     // Use DIRECT_URL for migrations (bypasses pgbouncer pooler)
     // At runtime, Next.js uses DATABASE_URL (pooler) via src/lib/prisma.ts
     url: process.env["DIRECT_URL"] ?? process.env["DATABASE_URL"],
-    directUrl: process.env["DIRECT_URL"] ?? process.env["DATABASE_URL"],
   },
 });

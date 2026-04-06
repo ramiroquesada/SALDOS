@@ -31,4 +31,5 @@ export async function updateFixedExpense(id: string, data: UpdateFixedExpenseInp
   const { familyId } = await requireAuth()
   await db.updateFixedExpense(id, familyId, data)
   revalidatePath('/dashboard/fixed')
+  revalidatePath('/dashboard')
 }
