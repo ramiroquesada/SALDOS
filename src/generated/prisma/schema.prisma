@@ -1,0 +1,111 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id        String   @id
+  email     String   @unique
+  name      String?
+  avatarUrl String?
+  familyId  String?
+  family    Family?  @relation(fields: [familyId], references: [id])
+  createdAt DateTime @default(now())
+}
+
+model Family {
+  id            String         @id @default(uuid())
+  name          String         @default("Mi familia")
+  inviteCode    String         @unique @default(uuid())
+  members       User[]
+  expenses      Expense[]
+  fixedExpenses FixedExpense[]
+  incomes       Income[]
+  savingsGoals  SavingsGoal[]
+  budgets       Budget[]
+  categories    Category[]
+  createdAt     DateTime       @default(now())
+}
+
+model Expense {
+  id              String   @id @default(uuid())
+  amount          Float
+  description     String?
+  category        String
+  spentBy         String
+  date            DateTime @default(now())
+  month           String
+  familyId        String
+  family          Family   @relation(fields: [familyId], references: [id])
+  userId          String
+  receiptImageUrl String?
+  createdAt       DateTime @default(now())
+
+  @@index([familyId, month])
+}
+
+model FixedExpense {
+  id              String  @id @default(uuid())
+  amount          Float
+  category        String
+  paid            Boolean @default(false)
+  month           String
+  familyId        String
+  family          Family  @relation(fields: [familyId], references: [id])
+  receiptImageUrl String?
+
+  @@index([familyId, month])
+}
+
+model Income {
+  id          String   @id @default(uuid())
+  amount      Float
+  description String?
+  earnedBy    String
+  date        DateTime @default(now())
+  month       String
+  familyId    String
+  family      Family   @relation(fields: [familyId], references: [id])
+  userId      String
+  createdAt   DateTime @default(now())
+
+  @@index([familyId, month])
+}
+
+model SavingsGoal {
+  id       String @id @default(uuid())
+  name     String @default("Bebé")
+  target   Float  @default(0)
+  saved    Float  @default(0)
+  familyId String
+  family   Family @relation(fields: [familyId], references: [id])
+}
+
+model Budget {
+  id       String @id @default(uuid())
+  category String
+  limit    Float
+  month    String
+  familyId String
+  family   Family @relation(fields: [familyId], references: [id])
+
+  @@unique([familyId, category, month])
+  @@index([familyId, month])
+}
+
+model Category {
+  id        String  @id @default(uuid())
+  name      String
+  emoji     String?
+  type      String // "variable" | "fixed"
+  isDefault Boolean @default(false)
+  familyId  String
+  family    Family  @relation(fields: [familyId], references: [id])
+
+  @@unique([familyId, name, type])
+  @@index([familyId, type])
+}
