@@ -9,6 +9,7 @@ export type Expense = {
   familyId: string
   userId: string
   createdAt: Date
+  receiptImageUrl: string | null
 }
 
 export type CreateExpenseInput = {
@@ -26,6 +27,7 @@ export type FixedExpense = {
   paid: boolean
   month: string
   familyId: string
+  receiptImageUrl: string | null
 }
 
 export type CreateFixedExpenseInput = {
@@ -77,4 +79,22 @@ export type BudgetWithSpent = {
   category: string
   limit: number | null
   spent: number
+}
+
+export type CategoryRow = {
+  id: string
+  name: string
+  emoji: string | null
+  isDefault: boolean
+}
+
+export type UpdateExpenseInput = {
+  amount?: number
+  description?: string | null
+  category?: string
+}
+
+export type UpdateFixedExpenseInput = {
+  amount?: number
+  category?: string
 }
