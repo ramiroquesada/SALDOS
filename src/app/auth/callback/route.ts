@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { prisma } from '@/lib/prisma'
+import { seedDefaultCategories } from '@/lib/db/categories'
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function GET(request: NextRequest) {
@@ -52,6 +53,7 @@ export async function GET(request: NextRequest) {
     })
 
     await supabase.auth.updateUser({ data: { familyId } })
+    await seedDefaultCategories(familyId)
   } else if (!user.user_metadata?.familyId && existingUser.familyId) {
     // Edge case: familyId en Prisma pero no en metadata
     await supabase.auth.updateUser({ data: { familyId: existingUser.familyId } })
