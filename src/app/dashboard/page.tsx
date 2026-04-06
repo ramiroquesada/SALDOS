@@ -3,6 +3,8 @@ import { getDashboardData } from '@/lib/db/dashboard'
 import { getMonthKey, formatMoney, formatMonthLabel } from '@/lib/utils'
 import { Header } from '@/components/layout/Header'
 import { CATEGORY_COLORS } from '@/lib/constants'
+import { getFamilyInviteInfo } from '@/lib/db/family'
+import { InviteCard } from '@/components/invite/InviteCard'
 
 type Props = {
   searchParams: Promise<{ month?: string }>
@@ -13,8 +15,11 @@ export default async function DashboardPage({ searchParams }: Props) {
   const { month } = await searchParams
   const currentMonth = month ?? getMonthKey()
 
-  const { totalIncome, totalVariableExpenses, totalFixedExpenses, balance, expensesByCategory } =
-    await getDashboardData(familyId, currentMonth)
+  const [{ totalIncome, totalVariableExpenses, totalFixedExpenses, balance, expensesByCategory }, familyInfo] =
+    await Promise.all([
+      getDashboardData(familyId, currentMonth),
+      getFamilyInviteInfo(familyId),
+    ])
 
   const totalExpenses = totalVariableExpenses + totalFixedExpenses
   const balancePositive = balance > 0
@@ -94,6 +99,15 @@ export default async function DashboardPage({ searchParams }: Props) {
                 : 'Sin gastos variables este mes.'}
             </p>
           </div>
+        )}
+
+        {/* Invitar pareja */}
+        {familyInfo && (
+          <InviteCard
+            inviteCode={familyInfo.inviteCode}
+            appUrl={process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'}
+            memberCount={familyInfo.members.length}
+          />
         )}
       </main>
     </>
