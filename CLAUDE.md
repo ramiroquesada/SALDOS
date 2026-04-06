@@ -23,6 +23,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `/dashboard/income` — ingresos por miembro
 - `/dashboard` — balance real del mes: ingresos − variables − fijos + breakdown por categoría
 
+### ✅ Fase 4A — Completada (2026-04-05)
+
+- Modelo `Category` en Prisma con seed automático de 18 categorías default al crear familia
+- `/dashboard/settings` — página de configuración de categorías (variable y fijas) con ⚙️ en Header
+- Formularios de gastos variables, fijos y presupuesto consumen categorías dinámicas de la DB
+- `updateExpense` y `updateFixedExpense` — edición inline en `ExpenseList` y `FixedExpenseList` con per-row `useTransition`
+- `ReceiptImageViewer` — lightbox overlay para ver foto de boleta (preparación para Fase 4B)
+- `receiptImageUrl String?` agregado a Expense y FixedExpense en el schema
+
 ### ✅ Fase 3 — Completada (2026-04-05)
 
 - `/dashboard/savings` — meta de ahorro con barra de progreso, depósitos, configuración de nombre y monto
@@ -82,11 +91,12 @@ Browser (React) → Server Components / Server Actions → Prisma → PostgreSQL
 src/
 ├── __tests__/utils.test.ts          # Vitest tests for utility functions
 ├── actions/
-│   ├── expenses.ts                  # createExpense, deleteExpense
-│   ├── fixed-expenses.ts            # createFixedExpense, toggleFixedExpensePaid, deleteFixedExpense
+│   ├── expenses.ts                  # createExpense, deleteExpense, updateExpense
+│   ├── fixed-expenses.ts            # createFixedExpense, toggleFixedExpensePaid, deleteFixedExpense, updateFixedExpense
 │   ├── income.ts                    # createIncome, deleteIncome
 │   ├── savings.ts                   # updateSavingsGoal, addToSavings
 │   ├── budget.ts                    # setBudget, removeBudget
+│   ├── categories.ts                # addCategory, removeCategory
 │   └── family.ts                    # joinFamilyByCode
 ├── app/
 │   ├── page.tsx                     # Root redirect (auth → /dashboard, no auth → /auth/login)
@@ -94,24 +104,25 @@ src/
 │   ├── globals.css                  # Global styles + Tailwind CSS 4
 │   ├── auth/
 │   │   ├── login/page.tsx           # Login page with Google button
-│   │   └── callback/route.ts        # OAuth callback → sync Prisma User+Family; handles ?invite=CODE
+│   │   └── callback/route.ts        # OAuth callback → sync Prisma User+Family; handles ?invite=CODE; seeds default categories
 │   ├── dashboard/
 │   │   ├── layout.tsx               # Dashboard shell: wraps children + BottomNav
 │   │   ├── page.tsx                 # Balance overview + category breakdown + invite card
-│   │   ├── expenses/page.tsx        # Variable expenses list + form
-│   │   ├── fixed/page.tsx           # Fixed expenses list + paid/unpaid toggle
+│   │   ├── expenses/page.tsx        # Variable expenses list + form (dynamic categories)
+│   │   ├── fixed/page.tsx           # Fixed expenses list + paid/unpaid toggle (dynamic categories)
 │   │   ├── income/page.tsx          # Income list + form
 │   │   ├── savings/page.tsx         # Savings goal + deposit form + goal config
-│   │   └── budget/page.tsx          # Per-category budget limits + semaphore bars
+│   │   ├── budget/page.tsx          # Per-category budget limits + semaphore bars (dynamic categories)
+│   │   └── settings/page.tsx        # Category management (add/delete custom categories)
 │   └── invite/[code]/page.tsx       # Public invite page (join family)
 ├── components/
 │   ├── auth/GoogleLoginButton.tsx
 │   ├── expenses/
-│   │   ├── ExpenseForm.tsx
-│   │   └── ExpenseList.tsx
+│   │   ├── ExpenseForm.tsx          # Accepts categories: CategoryRow[] prop
+│   │   └── ExpenseList.tsx          # Per-row inline edit (✏️) + receipt viewer (📷)
 │   ├── fixed/
-│   │   ├── FixedExpenseForm.tsx
-│   │   └── FixedExpenseList.tsx     # Per-row useTransition for toggle + delete
+│   │   ├── FixedExpenseForm.tsx     # Accepts categories: CategoryRow[] prop
+│   │   └── FixedExpenseList.tsx     # Per-row useTransition; inline edit (✏️) + receipt viewer (📷)
 │   ├── income/
 │   │   ├── IncomeForm.tsx
 │   │   └── IncomeList.tsx           # Per-row useTransition for delete
@@ -121,13 +132,18 @@ src/
 │   │   └── DepositForm.tsx          # Add funds to savings
 │   ├── budget/
 │   │   └── BudgetList.tsx           # All categories with inline edit + semaphore bar
+│   ├── receipt/
+│   │   └── ReceiptImageViewer.tsx   # Lightbox overlay for viewing receipt photos
+│   ├── settings/
+│   │   ├── CategoryList.tsx         # Category list with 🔒 for defaults, × for custom
+│   │   └── CategoryForm.tsx         # Inline form to add new category (emoji + name)
 │   ├── invite/
 │   │   ├── InviteCard.tsx           # Copyable invite link card
 │   │   ├── JoinWithGoogleButton.tsx # OAuth button with ?invite=CODE in redirectTo
 │   │   └── JoinFamilyButton.tsx     # Server Action button for authenticated users
 │   ├── layout/
 │   │   ├── BottomNav.tsx
-│   │   ├── Header.tsx               # currentMonth prop is optional
+│   │   ├── Header.tsx               # currentMonth optional; ⚙️ link to /dashboard/settings
 │   │   └── MonthSelector.tsx
 │   └── ui/
 │       ├── Button.tsx               # primary/ghost/danger, sm/md/lg, loading state
@@ -136,13 +152,14 @@ src/
 ├── generated/prisma/                # Auto-generated Prisma client (DO NOT EDIT)
 ├── lib/
 │   ├── auth.ts                      # requireAuth() → { userId, familyId, userName }
-│   ├── constants.ts                 # VARIABLE_CATEGORIES, FIXED_CATEGORIES, CATEGORY_COLORS
+│   ├── constants.ts                 # CATEGORY_COLORS (used for bar coloring); VARIABLE/FIXED_CATEGORIES kept as reference only
 │   ├── db/
-│   │   ├── expenses.ts              # Pure Prisma queries for variable expenses
-│   │   ├── fixed-expenses.ts        # Pure Prisma queries for fixed expenses
+│   │   ├── expenses.ts              # Pure Prisma queries for variable expenses (+ updateExpense)
+│   │   ├── fixed-expenses.ts        # Pure Prisma queries for fixed expenses (+ updateFixedExpense)
 │   │   ├── income.ts                # Pure Prisma queries for income
 │   │   ├── savings.ts               # getOrCreateSavingsGoal, updateSavingsGoalMeta, addToSaved
-│   │   ├── budget.ts                # getBudgetsWithSpent, upsertBudget, deleteBudget
+│   │   ├── budget.ts                # getBudgetsWithSpent (dynamic categories), upsertBudget, deleteBudget
+│   │   ├── categories.ts            # getCategoriesByFamily, createCategory, deleteCategory, seedDefaultCategories
 │   │   ├── family.ts                # getFamilyInviteInfo, getFamilyByInviteCode, joinFamily
 │   │   └── dashboard.ts             # getDashboardData() — parallel queries, balance calc
 │   ├── prisma.ts                    # PrismaClient singleton (with PrismaPg adapter)
@@ -150,7 +167,7 @@ src/
 │   │   ├── client.ts
 │   │   └── server.ts
 │   └── utils.ts                     # formatMoney, getMonthKey, formatMonthLabel, cn, prevMonth, nextMonth
-├── types/index.ts                   # Expense, FixedExpense, Income, SavingsGoal, Budget + input types
+├── types/index.ts                   # Expense, FixedExpense, Income, SavingsGoal, Budget, CategoryRow + input types
 middleware.ts                        # Protects /dashboard/*, redirects /auth/login if unauthenticated
 ```
 
