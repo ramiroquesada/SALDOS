@@ -32,24 +32,20 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `ReceiptImageViewer` — lightbox overlay para ver foto de boleta (preparación para Fase 4B)
 - `receiptImageUrl String?` agregado a Expense y FixedExpense en el schema
 
-### 🔄 Fase 4B — En progreso (2026-04-06)
+### ✅ Fase 4B — Completada (2026-04-06)
 
 **Objetivo:** Scanner de boletas con Gemini 1.5 Flash. Las fotos se procesan en memoria y se descartan — no se guardan.
 
-**Completado (Tasks 1-3):**
+**Completado (Tasks 1-8):**
 - `@google/generative-ai` instalado
 - `src/components/receipt/compressImage.ts` — Canvas API: redimensiona a max 1200px, JPEG 0.75
 - `src/app/api/receipts/scan/route.ts` — Route Handler POST: recibe FormData con imágenes, llama Gemini 1.5 Flash, retorna `{ items: [...] }`
 - `src/actions/receipts.ts` — `createExpensesFromReceipt` y `createFixedExpensesFromReceipt` Server Actions
-
-**Pendiente (Tasks 4-8):**
-- Task 4: `src/components/receipt/ReceiptUploadStep.tsx` — drag & drop + thumbnails
-- Task 5: `src/components/receipt/ReceiptProcessingStep.tsx` — spinner + error state
-- Task 6: `src/components/receipt/ReceiptReviewStep.tsx` — lista editable + confirmar
-- Task 7: `src/components/receipt/ReceiptScannerModal.tsx` + `ReceiptScannerButton.tsx`
-- Task 8: Wiring en `expenses/page.tsx` y `fixed/page.tsx`
-
-**Plan:** `docs/superpowers/plans/2026-04-06-fase4b-scanner-boletas.md`
+- `src/components/receipt/ReceiptUploadStep.tsx` — drag & drop + thumbnails
+- `src/components/receipt/ReceiptProcessingStep.tsx` — spinner + error state
+- `src/components/receipt/ReceiptReviewStep.tsx` — lista editable + confirmar
+- `src/components/receipt/ReceiptScannerModal.tsx` + `ReceiptScannerButton.tsx` — 3-step modal + button client island
+- Wiring en `expenses/page.tsx` y `fixed/page.tsx` — botón escanear en ambas páginas
 
 ### ✅ Fase 3 — Completada (2026-04-05)
 
