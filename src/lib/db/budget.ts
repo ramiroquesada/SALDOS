@@ -1,9 +1,13 @@
 import { prisma } from '@/lib/prisma'
-import { VARIABLE_CATEGORIES } from '@/lib/constants'
 import type { BudgetWithSpent } from '@/types'
 
 export async function getBudgetsWithSpent(familyId: string, month: string): Promise<BudgetWithSpent[]> {
-  const [budgets, expenses] = await Promise.all([
+  const [categories, budgets, expenses] = await Promise.all([
+    prisma.category.findMany({
+      where: { familyId, type: 'variable' },
+      select: { name: true },
+      orderBy: [{ isDefault: 'desc' }, { name: 'asc' }],
+    }),
     prisma.budget.findMany({ where: { familyId, month } }),
     prisma.expense.findMany({
       where: { familyId, month },
@@ -16,7 +20,7 @@ export async function getBudgetsWithSpent(familyId: string, month: string): Prom
     spentByCategory.set(e.category, (spentByCategory.get(e.category) ?? 0) + e.amount)
   }
 
-  return VARIABLE_CATEGORIES.map((category) => {
+  return categories.map(({ name: category }) => {
     const budget = budgets.find((b) => b.category === category)
     return {
       category,
