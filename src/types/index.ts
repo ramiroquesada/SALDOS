@@ -51,3 +51,30 @@ export type CreateIncomeInput = {
   description?: string
   // earnedBy viene de requireAuth().userName, no del formulario
 }
+
+export type SavingsGoal = {
+  id: string
+  name: string
+  target: number
+  saved: number
+  familyId: string
+}
+
+export type UpdateSavingsGoalInput = {
+  name?: string
+  target?: number
+}
+
+export type Budget = {
+  id: string
+  category: string
+  limit: number
+  month: string
+  familyId: string
+}
+
+export type BudgetWithSpent = {
+  category: string
+  limit: number | null
+  spent: number
+}
