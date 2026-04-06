@@ -1,0 +1,11 @@
+# Claude Code session files
+.claude/
+
+# Env files
+.env
+.env.local
+.env*.local
+
+# OS
+.DS_Store
+Thumbs.db
