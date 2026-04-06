@@ -90,5 +90,6 @@ model Budget {
   familyId String
   family   Family @relation(fields: [familyId], references: [id])
 
+  @@index([familyId, month])
   @@unique([familyId, category, month])
 }
